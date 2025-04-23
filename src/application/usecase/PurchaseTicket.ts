@@ -1,31 +1,43 @@
 import Ticket from "../../domain/entities/Ticket";
-import Transaction from "../../domain/entities/Transaction";
+import TicketReserved from "../../domain/event/TicketReserved";
+import Queue from "../../infra/queue/Queue";
 import Registry from "../../infra/registry/Registry";
 import PaymentGateway from "../gateway/PaymentGateway";
 import EventRepository from "../repository/EventRepository";
 import TicketRepository from "../repository/TicketRepository";
-import TransactionRepository from "../repository/TransactionRepository";
+import ProcessPayment from "./ProcessPayment";
 
 export default class PurchaseTicket{
     eventRepository: EventRepository;
     ticketRepository: TicketRepository;
+    processPayment: ProcessPayment;
     paymentGateway: PaymentGateway;
-    transactionRepository: TransactionRepository;
+    queue: Queue;
 
     constructor(readonly registry: Registry){
         this.eventRepository = registry.inject("eventRepository");
         this.ticketRepository = registry.inject("ticketRepository");
+        this.processPayment = registry.inject("processPayment");
         this.paymentGateway = registry.inject("paymentGateway");
-        this.transactionRepository = registry.inject("transactionRepository");
+        this.queue = registry.inject("queue");
     }
 
     async execute (input: Input): Promise<Output>{
         const event = await this.eventRepository.get(input.eventId);
         const ticket = Ticket.create(input.eventId, input.email);
         await this.ticketRepository.save(ticket);
-        const output = await this.paymentGateway.createTransaction({email: input.email, creditCardToken: input.creditCardToken, price: event.price});
-        const transaction = Transaction.create(ticket.ticketId, event.eventId, output.tid, event.price, output.status);
-        await this.transactionRepository.save(transaction);
+
+        const ticketReserved = new TicketReserved(ticket.ticketId, event.eventId, input.creditCardToken, event.price);
+        await this.queue.publish("ticketReserved", ticketReserved);
+
+
+        /*
+       const output = await this.processPayment.execute({ 
+            ticketId: ticket.ticketId, 
+            eventId: event.eventId, 
+            email: ticket.email,
+            price: event.price,
+            creditCardToken: input.creditCardToken});
 
         if(output.status === "approved"){
             ticket.approve();
@@ -38,9 +50,11 @@ export default class PurchaseTicket{
         return{
             ticketId: ticket.ticketId,
             status: ticket.status,
-            tid: transaction.tid,
-            price: transaction.price
+            tid: output.tid,
+            price: output.price
         }
+
+        */
     }
 }
 
@@ -52,7 +66,4 @@ type Input = {
 
 type Output = {
     ticketId: string,
-    status: string,
-    tid: string,
-    price: number
 }
