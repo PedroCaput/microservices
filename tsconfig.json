@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+      "esModuleInterop": true,
+      "module": "CommonJS", // ou "ESNext", depende do caso
+      "target": "ES2020",   // ou superior
+    }
+  }
+  

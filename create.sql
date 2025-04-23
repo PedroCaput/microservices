@@ -19,8 +19,9 @@ create table fullcycle.transaction (
     transaction_id uuid,
     ticket_id uuid,
     event_id uuid,
+    tid text,
     price numeric,
     status text
 );
 
-insert into fullcycle.event (event_id, description, price, capacity) values ('a0bcd12e3-fg45-hij6-7klm-n8o9pqrstucxy', 'Xuxa 10/10')
+insert into fullcycle.event (event_id, description, price, capacity) values ('a0bcd12e3-fg45-hij6-7klm-n8o9pqrstucxy', 'Xuxa 10/10/2025 23:00', 300, 1000);
